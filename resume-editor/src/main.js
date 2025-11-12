@@ -12,6 +12,7 @@ app.use(pinia)
 
 // 初始化简历存储
 const resumeStore = useResumeStore()
+console.log('初始化简历存储')
 resumeStore.initializeData()
 
 app.mount('#app')

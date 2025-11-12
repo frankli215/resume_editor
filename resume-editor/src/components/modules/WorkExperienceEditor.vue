@@ -11,7 +11,7 @@
           @input="handleInput"
           maxlength="50"
         >
-        <div class="char-count">{{ localData.company.length }}/50</div>
+        <div class="char-count">{{ (localData.company || '').length }}/50</div>
       </div>
       <div class="form-group">
         <label class="form-label">职位名称 *</label>
@@ -23,7 +23,7 @@
           @input="handleInput"
           maxlength="30"
         >
-        <div class="char-count">{{ localData.position.length }}/30</div>
+        <div class="char-count">{{ (localData.position || '').length }}/30</div>
       </div>
     </div>
     
@@ -77,43 +77,60 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['update'])
+
 // 使用简历存储
 const resumeStore = useResumeStore()
 
-// 本地数据副本
-const localData = ref({ ...props.data })
+// 本地数据副本，确保有默认值
+const localData = ref({
+  company: props.data.company || '某某科技有限公司',
+  position: props.data.position || '前端开发工程师',
+  startDate: props.data.startDate || '2020-07',
+  endDate: props.data.endDate || '至今',
+  description: props.data.description || '<ul><li>负责公司官网和后台管理系统的前端开发工作，使用Vue.js框架开发响应式用户界面</li><li>与UI设计师和后端工程师紧密协作，确保项目按时交付并满足需求</li><li>优化网站性能，将页面加载速度提升30%，用户体验显著改善</li><li>参与代码审查和技术分享，提升团队整体技术水平</li></ul>',
+  ...props.data
+})
 
 // 监听数据变化
 watch(
   () => props.data,
   (newData) => {
-    localData.value = { ...newData }
+    if (newData) {
+      localData.value = { 
+        company: newData.company || '某某科技有限公司',
+        position: newData.position || '前端开发工程师',
+        startDate: newData.startDate || '2020-07',
+        endDate: newData.endDate || '至今',
+        description: newData.description || '<ul><li>负责公司官网和后台管理系统的前端开发工作，使用Vue.js框架开发响应式用户界面</li><li>与UI设计师和后端工程师紧密协作，确保项目按时交付并满足需求</li><li>优化网站性能，将页面加载速度提升30%，用户体验显著改善</li><li>参与代码审查和技术分享，提升团队整体技术水平</li></ul>',
+        ...newData 
+      }
+    }
   },
   { deep: true }
 )
 
 // 处理输入事件
 const handleInput = () => {
-  // 工作经历是数组，需要通过父组件更新
-  console.log('工作经历数据变化:', { ...localData.value })
+  emit('update', { ...localData.value })
 }
 
 // 处理日期变化
 const handleDateChange = () => {
-  // 工作经历是数组，需要通过父组件更新
-  console.log('工作经历日期变化:', { ...localData.value })
+  emit('update', { ...localData.value })
 }
 
 // 处理描述变化
 const handleDescriptionChange = (value) => {
   localData.value.description = value
-  // 工作经历是数组，需要通过父组件更新
-  console.log('工作经历描述变化:', { ...localData.value })
+  emit('update', { ...localData.value })
 }
 
-// 获取描述长度
+// 获取描述长度（去除HTML标签）
 const getDescriptionLength = () => {
-  return localData.value.description ? localData.value.description.replace(/<[^>]*>/g, '').length : 0
+  if (!localData.value.description) return 0
+  // 简单去除HTML标签计算长度
+  return localData.value.description.replace(/<[^>]*>/g, '').length
 }
 </script>
 

@@ -11,7 +11,7 @@
           @input="handleInput"
           maxlength="50"
         >
-        <div class="char-count">{{ localData.school.length }}/50</div>
+        <div class="char-count">{{ (localData.school || '').length }}/50</div>
       </div>
       <div class="form-group">
         <label class="form-label">专业 *</label>
@@ -23,7 +23,7 @@
           @input="handleInput"
           maxlength="30"
         >
-        <div class="char-count">{{ localData.major.length }}/30</div>
+        <div class="char-count">{{ (localData.major || '').length }}/30</div>
       </div>
     </div>
     
@@ -85,31 +85,47 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['update'])
+
 // 使用简历存储
 const resumeStore = useResumeStore()
 
-// 本地数据副本
-const localData = ref({ ...props.data })
+// 本地数据副本，确保有默认值
+const localData = ref({
+  school: props.data.school || '某某大学',
+  major: props.data.major || '计算机科学与技术',
+  degree: props.data.degree || '本科',
+  startDate: props.data.startDate || '2016-09',
+  endDate: props.data.endDate || '2020-06',
+  ...props.data
+})
 
 // 监听数据变化
 watch(
   () => props.data,
   (newData) => {
-    localData.value = { ...newData }
+    if (newData) {
+      localData.value = { 
+        school: newData.school || '某某大学',
+        major: newData.major || '计算机科学与技术',
+        degree: newData.degree || '本科',
+        startDate: newData.startDate || '2016-09',
+        endDate: newData.endDate || '2020-06',
+        ...newData 
+      }
+    }
   },
   { deep: true }
 )
 
 // 处理输入事件
 const handleInput = () => {
-  // 教育经历是数组，需要通过父组件更新
-  console.log('教育经历数据变化:', { ...localData.value })
+  emit('update', { ...localData.value })
 }
 
 // 处理日期变化
 const handleDateChange = () => {
-  // 教育经历是数组，需要通过父组件更新
-  console.log('教育经历日期变化:', { ...localData.value })
+  emit('update', { ...localData.value })
 }
 </script>
 

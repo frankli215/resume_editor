@@ -20,7 +20,6 @@
 
 <script setup>
 import { ref, watch } from 'vue'
-import { useResumeStore } from '../../stores/resume'
 import RichTextEditor from '../common/RichTextEditor.vue'
 
 const props = defineProps({
@@ -32,24 +31,27 @@ const props = defineProps({
   }
 })
 
-// 使用简历存储
-const resumeStore = useResumeStore()
+const emit = defineEmits(['update'])
 
 // 本地数据副本
-const localData = ref({ ...resumeStore.selfEvaluation })
+const localData = ref({ 
+  content: props.data.content || '具备3年前端开发经验，熟练掌握Vue.js和React框架，有丰富的Web应用开发经验。具备良好的沟通能力和团队协作精神，能够快速适应新环境并承担工作压力。'
+})
 
 // 监听数据变化
 watch(
-  () => resumeStore.selfEvaluation,
+  () => props.data,
   (newData) => {
-    localData.value = { ...newData }
+    localData.value = { 
+      content: newData.content || '具备3年前端开发经验，熟练掌握Vue.js和React框架，有丰富的Web应用开发经验。具备良好的沟通能力和团队协作精神，能够快速适应新环境并承担工作压力.'
+    }
   },
   { deep: true }
 )
 
 // 处理内容变化
 const handleContentChange = (value) => {
-  resumeStore.updateSelfEvaluation({ content: value })
+  emit('update', { content: value })
 }
 
 // 获取内容长度

@@ -64,24 +64,40 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['update'])
+
 // 使用简历存储
 const resumeStore = useResumeStore()
 
-// 本地数据副本
-const localData = ref({ ...resumeStore.basicInfo })
+// 本地数据副本，确保有默认值
+const localData = ref({
+  name: props.data.name || '张三',
+  phone: props.data.phone || '138-0000-0000',
+  email: props.data.email || 'zhangsan@example.com',
+  address: props.data.address || '北京市朝阳区某某街道',
+  ...props.data
+})
 
 // 监听数据变化
 watch(
-  () => resumeStore.basicInfo,
+  () => props.data,
   (newData) => {
-    localData.value = { ...newData }
+    if (newData) {
+      localData.value = { 
+        name: newData.name || '张三',
+        phone: newData.phone || '138-0000-0000',
+        email: newData.email || 'zhangsan@example.com',
+        address: newData.address || '北京市朝阳区某某街道',
+        ...newData 
+      }
+    }
   },
   { deep: true }
 )
 
 // 处理输入事件
 const handleInput = () => {
-  resumeStore.updateBasicInfo({ ...localData.value })
+  emit('update', { ...localData.value })
 }
 </script>
 

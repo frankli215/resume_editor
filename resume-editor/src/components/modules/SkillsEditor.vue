@@ -24,9 +24,9 @@
         </div>
       </div>
       
-      <div class="skills-count" :class="{ warning: localData.skills.length < 3 }">
-        已添加 {{ localData.skills.length }} 项技能
-        <span v-if="localData.skills.length < 3">（建议至少添加3项技能）</span>
+      <div class="skills-count" :class="{ warning: (localData.skills || []).length < 3 }">
+        已添加 {{ (localData.skills || []).length }} 项技能
+        <span v-if="(localData.skills || []).length < 3">（建议至少添加3项技能）</span>
       </div>
     </div>
   </div>
@@ -45,12 +45,14 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['update'])
+
 // 使用简历存储
 const resumeStore = useResumeStore()
 
-// 本地数据副本
+// 本地数据副本，确保有默认值
 const localData = ref({ 
-  skills: [...(resumeStore.skills?.skills || [])] 
+  skills: [...(props.data?.skills || resumeStore.skills?.skills || [])] 
 })
 
 // 新技能输入
@@ -58,7 +60,7 @@ const newSkill = ref('')
 
 // 监听数据变化
 watch(
-  () => resumeStore.skills,
+  () => props.data,
   (newData) => {
     localData.value.skills = [...(newData?.skills || [])]
   },
@@ -69,8 +71,9 @@ watch(
 const addSkill = () => {
   if (newSkill.value.trim() && !localData.value.skills.includes(newSkill.value.trim())) {
     const newSkills = [...localData.value.skills, newSkill.value.trim()]
-    resumeStore.updateSkills({ skills: newSkills })
-    newSkill.value = ''
+    localData.value.skills = newSkills
+    // 通过父组件更新
+    emit('update', { skills: newSkills })
   }
 }
 
@@ -78,7 +81,9 @@ const addSkill = () => {
 const removeSkill = (index) => {
   const newSkills = [...localData.value.skills]
   newSkills.splice(index, 1)
-  resumeStore.updateSkills({ skills: newSkills })
+  localData.value.skills = newSkills
+  // 通过父组件更新
+  emit('update', { skills: newSkills })
 }
 </script>
 

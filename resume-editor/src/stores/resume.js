@@ -4,37 +4,49 @@ export const useResumeStore = defineStore('resume', {
   state: () => ({
     // 基础信息
     basicInfo: {
-      name: '',
-      phone: '',
-      email: '',
-      address: ''
+      name: '张三',
+      phone: '138-0000-0000',
+      email: 'zhangsan@example.com',
+      address: '北京市朝阳区某某街道'
     },
     
     // 求职意向
     jobIntention: {
-      position: '',
-      industry: '',
-      salary: '',
-      city: ''
+      position: '前端开发工程师',
+      industry: '互联网/IT',
+      salary: '15K-20K',
+      city: '北京'
     },
     
     // 工作经历
-    workExperience: [],
+    workExperience: [{
+      company: '某某科技有限公司',
+      position: '前端开发工程师',
+      startDate: '2020-07',
+      endDate: '至今',
+      description: '<ul><li>负责公司官网和后台管理系统的前端开发工作，使用Vue.js框架开发响应式用户界面</li><li>与UI设计师和后端工程师紧密协作，确保项目按时交付并满足需求</li><li>优化网站性能，将页面加载速度提升30%，用户体验显著改善</li><li>参与代码审查和技术分享，提升团队整体技术水平</li></ul>'
+    }],
     
     // 教育经历
-    education: [],
+    education: [{
+      school: '某某大学',
+      major: '计算机科学与技术',
+      degree: '本科',
+      startDate: '2016-09',
+      endDate: '2020-06'
+    }],
     
     // 项目经历
     project: [],
     
     // 技能证书
     skills: {
-      skills: []
+      skills: ['HTML/CSS', 'JavaScript', 'Vue.js', 'React', 'Node.js']
     },
     
     // 自我评价
     selfEvaluation: {
-      content: ''
+      content: '具备3年前端开发经验，熟练掌握Vue.js和React框架，有丰富的Web应用开发经验。具备良好的沟通能力和团队协作精神，能够快速适应新环境并承担工作压力。'
     },
     
     // 模块配置

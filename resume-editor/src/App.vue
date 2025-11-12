@@ -5,7 +5,17 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
+import { useResumeStore } from './stores/resume'
 import ResumeEditor from './views/ResumeEditor.vue'
+
+const resumeStore = useResumeStore()
+
+onMounted(() => {
+  // 初始化简历数据
+  resumeStore.initializeData()
+  console.log('App mounted, resume data initialized')
+})
 </script>
 
 <style>

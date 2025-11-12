@@ -18,6 +18,8 @@
               <option value="0.5">50%</option>
               <option value="0.75">75%</option>
               <option value="1">100%</option>
+              <option value="1.25">125%</option>
+              <option value="1.5">150%</option>
             </select>
           </div>
         </div>
@@ -43,43 +45,43 @@
           <div class="resume-preview">
             <!-- 基础信息预览 -->
             <BasicInfoPreview 
-              v-if="resumeData.basicInfo && (resumeData.basicInfo.name || resumeData.basicInfo.phone || resumeData.basicInfo.email || resumeData.basicInfo.address)" 
+              v-if="isModuleEnabled('basic-info') && resumeData.basicInfo && (resumeData.basicInfo.name || resumeData.basicInfo.phone || resumeData.basicInfo.email || resumeData.basicInfo.address)" 
               :data="resumeData.basicInfo" 
             />
             
             <!-- 求职意向预览 -->
             <JobIntentionPreview 
-              v-if="resumeData.jobIntention && (resumeData.jobIntention.position || resumeData.jobIntention.industry || resumeData.jobIntention.salary)" 
+              v-if="isModuleEnabled('job-intention') && resumeData.jobIntention && (resumeData.jobIntention.position || resumeData.jobIntention.industry || resumeData.jobIntention.salary)" 
               :data="resumeData.jobIntention" 
             />
             
             <!-- 工作经历预览 -->
             <WorkExperiencePreview 
-              v-if="resumeData.workExperience && resumeData.workExperience.length > 0" 
+              v-if="isModuleEnabled('work-experience')" 
               :data="resumeData.workExperience" 
             />
             
             <!-- 教育经历预览 -->
             <EducationPreview 
-              v-if="resumeData.education && resumeData.education.length > 0" 
+              v-if="isModuleEnabled('education') && resumeData.education && resumeData.education.length > 0" 
               :data="resumeData.education" 
             />
             
             <!-- 项目经历预览 -->
             <ProjectPreview 
-              v-if="resumeData.project && resumeData.project.length > 0" 
+              v-if="isModuleEnabled('project') && resumeData.project && resumeData.project.length > 0" 
               :data="resumeData.project" 
             />
             
             <!-- 技能证书预览 -->
             <SkillsPreview 
-              v-if="resumeData.skills" 
+              v-if="isModuleEnabled('skills') && resumeData.skills" 
               :data="resumeData.skills" 
             />
             
             <!-- 自我评价预览 -->
             <SelfEvaluationPreview 
-              v-if="resumeData.selfEvaluation && resumeData.selfEvaluation.content" 
+              v-if="isModuleEnabled('self-evaluation') && resumeData.selfEvaluation && resumeData.selfEvaluation.content" 
               :data="resumeData.selfEvaluation" 
             />
           </div>
@@ -130,6 +132,12 @@ const resumeData = computed(() => ({
   skills: resumeStore.skills,
   selfEvaluation: resumeStore.selfEvaluation
 }))
+
+// 检查模块是否启用
+const isModuleEnabled = (moduleId) => {
+  const module = resumeStore.modules.find(m => m.id === moduleId)
+  return module ? module.enabled : false
+}
 
 // 切换折叠状态
 const toggleCollapse = () => {

@@ -11,7 +11,7 @@
           @input="handleInput"
           maxlength="50"
         >
-        <div class="char-count">{{ localData.name.length }}/50</div>
+        <div class="char-count">{{ (localData.name || '').length }}/50</div>
       </div>
       <div class="form-group">
         <label class="form-label">担任角色 *</label>
@@ -23,7 +23,7 @@
           @input="handleInput"
           maxlength="30"
         >
-        <div class="char-count">{{ localData.role.length }}/30</div>
+        <div class="char-count">{{ (localData.role || '').length }}/30</div>
       </div>
     </div>
     
@@ -60,7 +60,6 @@
 
 <script setup>
 import { ref, watch } from 'vue'
-import { useResumeStore } from '../../stores/resume'
 import DatePicker from '../common/DatePicker.vue'
 import RichTextEditor from '../common/RichTextEditor.vue'
 
@@ -77,38 +76,50 @@ const props = defineProps({
   }
 })
 
-// 使用简历存储
-const resumeStore = useResumeStore()
+const emit = defineEmits(['update'])
 
-// 本地数据副本
-const localData = ref({ ...props.data })
+// 本地数据副本，确保有默认值
+const localData = ref({
+  name: props.data.name || '',
+  role: props.data.role || '',
+  startDate: props.data.startDate || '',
+  endDate: props.data.endDate || '',
+  description: props.data.description || '',
+  ...props.data
+})
 
 // 监听数据变化
 watch(
   () => props.data,
   (newData) => {
-    localData.value = { ...newData }
+    if (newData) {
+      localData.value = { 
+        name: newData.name || '',
+        role: newData.role || '',
+        startDate: newData.startDate || '',
+        endDate: newData.endDate || '',
+        description: newData.description || '',
+        ...newData 
+      }
+    }
   },
   { deep: true }
 )
 
 // 处理输入事件
 const handleInput = () => {
-  // 项目经历是数组，需要通过父组件更新
-  console.log('项目经历数据变化:', { ...localData.value })
+  emit('update', { ...localData.value })
 }
 
 // 处理日期变化
 const handleDateChange = () => {
-  // 项目经历是数组，需要通过父组件更新
-  console.log('项目经历日期变化:', { ...localData.value })
+  emit('update', { ...localData.value })
 }
 
 // 处理描述变化
 const handleDescriptionChange = (value) => {
   localData.value.description = value
-  // 项目经历是数组，需要通过父组件更新
-  console.log('项目经历描述变化:', { ...localData.value })
+  emit('update', { ...localData.value })
 }
 
 // 获取描述长度

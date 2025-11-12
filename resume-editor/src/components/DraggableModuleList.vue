@@ -5,14 +5,14 @@
       :key="module.id"
       class="module-container"
       :class="{ 'drag-over': dragOverIndex === index }"
+      @dragover="handleDragOver($event, index)"
+      @dragleave="handleDragLeave"
+      @drop="handleDrop($event, index)"
     >
       <div 
         class="module-wrapper"
         draggable="true"
         @dragstart="handleDragStart($event, index)"
-        @dragover="handleDragOver($event, index)"
-        @dragleave="handleDragLeave"
-        @drop="handleDrop($event, index)"
         @dragend="handleDragEnd"
       >
         <div class="module-header">
@@ -21,44 +21,91 @@
             <span class="module-name">{{ getModuleName(module.id) }}</span>
           </div>
           <div class="module-actions">
-            <button class="action-btn add-btn" @click="addEntry(module.id)">+ 添加条目</button>
-            <div class="more-actions">
-              <button class="action-btn more-btn">⋮</button>
-              <div class="dropdown-menu">
-                <button class="dropdown-item">复制模块</button>
-                <button class="dropdown-item">删除所有条目</button>
-              </div>
-            </div>
+            <button 
+              v-if="isMultiEntryModule(module.id)" 
+              class="add-btn"
+              @click="addEntry(module.id)"
+            >
+              + 添加条目
+            </button>
           </div>
         </div>
         
         <div class="module-content">
-          <div 
-            v-if="!hasEntries(module.id)" 
-            class="empty-state"
-            @click="addEntry(module.id)"
-          >
-            + 点击添加 {{ getModuleName(module.id) }} 内容
-          </div>
+          <!-- 单条目模块 -->
+          <component
+            v-if="isSingleEntryModule(module.id)"
+            :is="getModuleComponent(module.id)"
+            :data="getModuleData(module.id)"
+            @update="updateEntry(module.id, 0, $event)"
+          />
           
-          <div v-else class="entries-list">
+          <!-- 多条目模块 -->
+          <div v-else>
+            <!-- 已保存的条目 -->
             <div 
               v-for="(entry, entryIndex) in getModuleEntries(module.id)" 
               :key="entryIndex"
               class="entry-item"
-              :class="{ 'selected': selectedEntry === `${module.id}-${entryIndex}` }"
             >
-              <div class="entry-content">
-                <component 
-                  :is="getModuleComponent(module.id)" 
-                  :data="entry"
-                  @update="updateEntry(module.id, entryIndex, $event)"
-                />
+              <div class="entry-header">
+                <span class="entry-title">
+                  {{ module.id === 'work-experience' ? entry.company : 
+                     module.id === 'education' ? entry.school : 
+                     module.id === 'project' ? entry.name : '' }}
+                </span>
+                <div class="entry-actions">
+                  <button 
+                    class="copy-btn"
+                    @click="copyEntry(module.id, entryIndex)"
+                  >
+                    复制
+                  </button>
+                  <button 
+                    class="delete-btn"
+                    @click="deleteEntry(module.id, entryIndex)"
+                  >
+                    删除
+                  </button>
+                </div>
               </div>
+              <component
+                :is="getModuleComponent(module.id)"
+                :data="entry"
+                @update="updateEntry(module.id, entryIndex, $event)"
+              />
+            </div>
+            
+            <!-- 新条目表单 -->
+            <div 
+              v-for="(newEntry, newEntryIndex) in newEntries[module.id]" 
+              :key="`new-${newEntryIndex}`"
+              class="entry-item new-entry"
+            >
+              <div class="entry-header">
+                <span class="entry-title">新增条目</span>
+                <div class="entry-actions">
+                  <button 
+                    v-if="newEntries[module.id].length > 1"
+                    class="delete-btn"
+                    @click="removeNewEntryForm(module.id, newEntryIndex)"
+                  >
+                    删除
+                  </button>
+                </div>
+              </div>
+              <component
+                :is="getModuleComponent(module.id)"
+                :data="newEntry"
+                @update="updateNewEntry(module.id, newEntryIndex, $event)"
+              />
               <div class="entry-actions">
-                <button class="entry-action-btn edit-btn" title="编辑">✏️</button>
-                <button class="entry-action-btn copy-btn" title="复制" @click="copyEntry(module.id, entryIndex)">📋</button>
-                <button class="entry-action-btn delete-btn" title="删除" @click="deleteEntry(module.id, entryIndex)">🗑️</button>
+                <button 
+                  class="save-btn"
+                  @click="addEntryFromForm(module.id, newEntryIndex)"
+                >
+                  保存
+                </button>
               </div>
             </div>
           </div>
@@ -69,7 +116,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { useResumeStore } from '../stores/resume'
 import BasicInfoEditor from './modules/BasicInfoEditor.vue'
 import JobIntentionEditor from './modules/JobIntentionEditor.vue'
@@ -90,6 +137,47 @@ const enabledModules = computed(() => {
 const selectedEntry = ref(null)
 const dragOverIndex = ref(null)
 const draggedIndex = ref(null)
+
+// 新条目表单数组，为每个模块类型维护一个数组
+const newEntries = reactive({
+  'work-experience': [{
+    company: '某某科技有限公司',
+    position: '前端开发工程师',
+    startDate: '2020-07',
+    endDate: '至今',
+    description: '<ul><li>负责公司官网和后台管理系统的前端开发工作，使用Vue.js框架开发响应式用户界面</li><li>与UI设计师和后端工程师紧密协作，确保项目按时交付并满足需求</li><li>优化网站性能，将页面加载速度提升30%，用户体验显著改善</li><li>参与代码审查和技术分享，提升团队整体技术水平</li></ul>'
+  }],
+  'education': [{
+    school: '某某大学',
+    major: '计算机科学与技术',
+    degree: '本科',
+    startDate: '2016-09',
+    endDate: '2020-06'
+  }],
+  'project': [{
+    name: '',
+    role: '',
+    startDate: '',
+    endDate: '',
+    description: ''
+  }]
+})
+
+// 单条目模块列表（包括工作经历）
+const singleEntryModules = ['basic-info', 'job-intention', 'work-experience', 'skills', 'self-evaluation']
+
+// 多条目模块列表（不包括工作经历）
+const multiEntryModules = ['education', 'project']
+
+// 判断是否为单条目模块
+const isSingleEntryModule = (moduleId) => {
+  return singleEntryModules.includes(moduleId)
+}
+
+// 判断是否为多条目模块
+const isMultiEntryModule = (moduleId) => {
+  return multiEntryModules.includes(moduleId)
+}
 
 // 获取模块名称
 const getModuleName = (moduleId) => {
@@ -139,6 +227,15 @@ const hasEntries = (moduleId) => {
   if (Array.isArray(data)) {
     return data.length > 0
   }
+  // 对于单条目模块，检查是否有实际数据
+  if (isSingleEntryModule(moduleId)) {
+    if (!data) return false
+    // 检查对象是否有非空属性（排除空字符串）
+    return Object.values(data).some(value => {
+      // 如果值存在且不为空字符串，则认为有数据
+      return value !== undefined && value !== null && value !== ''
+    })
+  }
   return !!data
 }
 
@@ -147,21 +244,167 @@ const getModuleEntries = (moduleId) => {
   return resumeStore[moduleId] || []
 }
 
-// 添加条目
-const addEntry = (moduleId) => {
+// 获取单条目模块的数据（带默认值）
+const getModuleData = (moduleId) => {
+  const storeData = resumeStore[moduleId] || {}
+  
+  // 根据模块类型返回带默认值的数据
   switch (moduleId) {
+    case 'basic-info':
+      return {
+        name: storeData.name || '张三',
+        phone: storeData.phone || '138-0000-0000',
+        email: storeData.email || 'zhangsan@example.com',
+        address: storeData.address || '北京市朝阳区某某街道'
+      }
+    case 'job-intention':
+      return {
+        position: storeData.position || '前端开发工程师',
+        industry: storeData.industry || '互联网/IT',
+        salary: storeData.salary || '15K-20K',
+        city: storeData.city || '北京'
+      }
     case 'work-experience':
-      resumeStore.addWorkExperience()
-      break
-    case 'education':
-      resumeStore.addEducation()
-      break
-    case 'project':
-      resumeStore.addProject()
-      break
+      // 工作经历作为单条目模块处理
+      return {
+        company: storeData.company || '某某科技有限公司',
+        position: storeData.position || '前端开发工程师',
+        startDate: storeData.startDate || '2020-07',
+        endDate: storeData.endDate || '至今',
+        description: storeData.description || '<ul><li>负责公司官网和后台管理系统的前端开发工作，使用Vue.js框架开发响应式用户界面</li><li>与UI设计师和后端工程师紧密协作，确保项目按时交付并满足需求</li><li>优化网站性能，将页面加载速度提升30%，用户体验显著改善</li><li>参与代码审查和技术分享，提升团队整体技术水平</li></ul>'
+      }
+    case 'skills':
+      return {
+        skills: storeData.skills && storeData.skills.length > 0 ? storeData.skills : ['HTML/CSS', 'JavaScript', 'Vue.js', 'React', 'Node.js']
+      }
+    case 'self-evaluation':
+      return {
+        content: storeData.content || '具备3年前端开发经验，熟练掌握Vue.js和React框架，有丰富的Web应用开发经验。具备良好的沟通能力和团队协作精神，能够快速适应新环境并承担工作压力。'
+      }
     default:
-      // 其他模块不需要添加条目
-      break
+      return storeData
+  }
+}
+
+// 更新新条目数据
+const updateNewEntry = (moduleId, entryIndex, data) => {
+  if (newEntries[moduleId] && newEntries[moduleId][entryIndex]) {
+    newEntries[moduleId][entryIndex] = { ...newEntries[moduleId][entryIndex], ...data }
+  }
+}
+
+// 添加新条目表单
+const addEntry = (moduleId) => {
+  if (newEntries[moduleId]) {
+    // 根据模块类型添加空的新条目表单
+    switch (moduleId) {
+      case 'work-experience':
+        newEntries[moduleId].push({
+          company: '某某科技有限公司',
+          position: '前端开发工程师',
+          startDate: '2020-07',
+          endDate: '至今',
+          description: '<ul><li>负责公司官网和后台管理系统的前端开发工作，使用Vue.js框架开发响应式用户界面</li><li>与UI设计师和后端工程师紧密协作，确保项目按时交付并满足需求</li><li>优化网站性能，将页面加载速度提升30%，用户体验显著改善</li><li>参与代码审查和技术分享，提升团队整体技术水平</li></ul>'
+        })
+        break
+      case 'education':
+        newEntries[moduleId].push({
+          school: '某某大学',
+          major: '计算机科学与技术',
+          degree: '本科',
+          startDate: '2016-09',
+          endDate: '2020-06'
+        })
+        break
+      case 'project':
+        newEntries[moduleId].push({
+          name: '',
+          role: '',
+          startDate: '',
+          endDate: '',
+          description: ''
+        })
+        break
+    }
+  }
+}
+
+// 从表单添加新条目
+const addEntryFromForm = (moduleId, entryIndex) => {
+  // 添加新条目
+  if (newEntries[moduleId] && newEntries[moduleId][entryIndex]) {
+    const entryData = newEntries[moduleId][entryIndex]
+    
+    // 如果是第一个表单（索引为0），则更新现有条目而不是添加新条目
+    if (entryIndex === 0 && resumeStore[moduleId] && resumeStore[moduleId].length > 0) {
+      // 更新现有条目
+      updateEntry(moduleId, 0, entryData)
+    } else {
+      // 添加新条目
+      switch (moduleId) {
+        case 'work-experience':
+          resumeStore.addWorkExperience(entryData)
+          break
+        case 'education':
+          resumeStore.addEducation(entryData)
+          break
+        case 'project':
+          resumeStore.addProject(entryData)
+          break
+      }
+    }
+    
+    // 移除已添加的表单（除了第一个表单）
+    if (entryIndex > 0) {
+      removeNewEntryForm(moduleId, entryIndex)
+    } else {
+      // 对于第一个表单，重置为默认值而不是移除
+      switch (moduleId) {
+        case 'work-experience':
+          newEntries[moduleId][entryIndex] = {
+            company: '某某科技有限公司',
+            position: '前端开发工程师',
+            startDate: '2020-07',
+            endDate: '至今',
+            description: '<ul><li>负责公司官网和后台管理系统的前端开发工作，使用Vue.js框架开发响应式用户界面</li><li>与UI设计师和后端工程师紧密协作，确保项目按时交付并满足需求</li><li>优化网站性能，将页面加载速度提升30%，用户体验显著改善</li><li>参与代码审查和技术分享，提升团队整体技术水平</li></ul>'
+          }
+          break
+        case 'education':
+          newEntries[moduleId][entryIndex] = {
+            school: '某某大学',
+            major: '计算机科学与技术',
+            degree: '本科',
+            startDate: '2016-09',
+            endDate: '2020-06'
+          }
+          break
+        case 'project':
+          newEntries[moduleId][entryIndex] = {
+            name: '',
+            role: '',
+            startDate: '',
+            endDate: '',
+            description: ''
+          }
+          break
+      }
+    }
+    
+    // 添加一个新的空表单（除了项目经历）
+    if (moduleId !== 'project') {
+      addEntry(moduleId)
+    }
+  }
+}
+
+// 移除新条目表单
+const removeNewEntryForm = (moduleId, entryIndex) => {
+  if (newEntries[moduleId] && newEntries[moduleId][entryIndex]) {
+    newEntries[moduleId].splice(entryIndex, 1)
+    // 确保始终至少有一个空表单
+    if (newEntries[moduleId].length === 0) {
+      addEntry(moduleId)
+    }
   }
 }
 
@@ -175,7 +418,8 @@ const updateEntry = (moduleId, entryIndex, data) => {
       resumeStore.updateJobIntention(data)
       break
     case 'work-experience':
-      resumeStore.updateWorkExperience(entryIndex, data)
+      // 工作经历作为单条目模块处理，直接更新整个对象
+      resumeStore.updateWorkExperience(0, data)
       break
     case 'education':
       resumeStore.updateEducation(entryIndex, data)
@@ -266,23 +510,26 @@ const handleDragEnd = () => {
 .draggable-module-list {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px;
+  padding: 20px 0;
 }
 
 .module-container {
   background: white;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  transition: border-color 0.2s;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .module-container:hover {
   border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .module-container.drag-over {
-  border-color: red;
-  box-shadow: 0 0 0 1px red;
+  border-color: #165DFF;
+  box-shadow: 0 0 0 2px rgba(22, 93, 255, 0.2);
 }
 
 .module-wrapper {
@@ -293,157 +540,109 @@ const handleDragEnd = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border-color);
+  background: #fafafa;
+  border-radius: 8px 8px 0 0;
 }
 
 .module-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: 10px;
+}
+
+.module-icon {
+  font-size: 16px;
+}
+
+.module-name {
   font-weight: 600;
-  color: var(--text-color);
+  font-size: 16px;
 }
 
-.module-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.action-btn {
+.module-actions .add-btn {
+  background: var(--primary-color);
+  color: white;
   border: none;
-  background: transparent;
-  cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px 12px;
   border-radius: 4px;
-  font-size: 14px;
-}
-
-.add-btn {
-  color: var(--success-color);
-}
-
-.add-btn:hover {
-  text-decoration: underline;
-}
-
-.more-btn {
-  color: var(--text-secondary);
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dropdown-menu {
-  position: absolute;
-  right: 0;
-  top: 100%;
-  background: white;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  z-index: 100;
-  display: none;
-}
-
-.more-actions:hover .dropdown-menu {
-  display: block;
-}
-
-.dropdown-item {
-  display: block;
-  width: 100%;
-  padding: 8px 12px;
-  border: none;
-  background: transparent;
-  text-align: left;
   cursor: pointer;
   font-size: 14px;
-  color: var(--text-color);
+  transition: background 0.2s;
 }
 
-.dropdown-item:hover {
-  background: #f5f5f5;
+.module-actions .add-btn:hover {
+  background: #0044cc;
 }
 
 .module-content {
   padding: 20px;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 20px;
-  border: 1px dashed var(--success-color);
-  border-radius: 4px;
-  color: var(--success-color);
-  cursor: pointer;
-}
-
-.empty-state:hover {
-  background: #F0FFF4;
-}
-
-.entries-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 .entry-item {
+  margin-bottom: 20px;
+  padding: 15px;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 16px;
-  position: relative;
-  transition: border-color 0.2s;
+  border-radius: 6px;
+  background: #fdfdfd;
 }
 
-.entry-item.selected {
-  border-color: #FF7D00;
+.entry-item.new-entry {
+  background: #f0f8ff;
+  border-color: #165DFF;
+}
+
+.entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.entry-title {
+  font-weight: 600;
+  font-size: 14px;
 }
 
 .entry-actions {
-  position: absolute;
-  right: 16px;
-  top: 16px;
   display: flex;
   gap: 8px;
-  opacity: 0;
-  transition: opacity 0.2s;
 }
 
-.entry-item:hover .entry-actions {
-  opacity: 1;
-}
-
-.entry-action-btn {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.entry-actions .delete-btn,
+.entry-actions .copy-btn,
+.entry-actions .save-btn {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  background: white;
   border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
 }
 
-.entry-action-btn:hover {
-  background: #f5f5f5;
+.entry-actions .delete-btn:hover {
+  background: #ff4d4f;
+  color: white;
+  border-color: #ff4d4f;
 }
 
-.edit-btn:hover {
-  color: var(--primary-color);
+.entry-actions .copy-btn:hover {
+  background: #165DFF;
+  color: white;
+  border-color: #165DFF;
 }
 
-.copy-btn:hover {
-  color: var(--success-color);
+.entry-actions .save-btn {
+  background: var(--success-color);
+  color: white;
+  border-color: var(--success-color);
 }
 
-.delete-btn:hover {
-  color: var(--error-color);
+.entry-actions .save-btn:hover {
+  background: #4caf50;
+  border-color: #4caf50;
 }
 </style>

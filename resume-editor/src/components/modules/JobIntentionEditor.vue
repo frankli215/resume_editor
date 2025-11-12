@@ -64,24 +64,38 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['update'])
+
 // 使用简历存储
 const resumeStore = useResumeStore()
 
 // 本地数据副本
-const localData = ref({ ...resumeStore.jobIntention })
+const localData = ref({
+  position: props.data.position || '前端开发工程师',
+  industry: props.data.industry || '互联网/IT',
+  salary: props.data.salary || '15K-20K',
+  city: props.data.city || '北京',
+  ...props.data
+})
 
 // 监听数据变化
 watch(
-  () => resumeStore.jobIntention,
+  () => props.data,
   (newData) => {
-    localData.value = { ...newData }
+    localData.value = { 
+      position: newData.position || '前端开发工程师',
+      industry: newData.industry || '互联网/IT',
+      salary: newData.salary || '15K-20K',
+      city: newData.city || '北京',
+      ...newData 
+    }
   },
   { deep: true }
 )
 
 // 处理输入事件
 const handleInput = () => {
-  resumeStore.updateJobIntention({ ...localData.value })
+  emit('update', { ...localData.value })
 }
 </script>
 
